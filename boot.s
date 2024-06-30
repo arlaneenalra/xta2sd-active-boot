@@ -2,7 +2,7 @@
 ;; Tandy 1110HD. This will require sacrificing roughly 1k of memory to
 ;; to make work.
 ;;
-;; A large portion of this comes from https://thestarman.pcministry.com/asm/mbr/WhyUseThisCode.htm
+;; A large portion of this comes from https://thestarman.pcministry.com/asm/mbr/STDMBR.htm 
 
 CYLINDERS        equ 0384h
 HEADS            equ 0Fh
