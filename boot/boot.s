@@ -35,9 +35,9 @@ DEBUG equ 4h
   call output_message
 %endmacro
 
-%include "debug.inc"
-%include "macro.inc"
-%include "partition.inc"
+%include "boot/debug.inc"
+%include "boot/macro.inc"
+%include "boot/partition.inc"
 
 main:
   ;; We're relying on the jmp being 2 bytes

@@ -1,4 +1,5 @@
 *.lst
 *.bin
+*.com
 real_boot.img
 boot.img
