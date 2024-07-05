@@ -1,18 +1,27 @@
 AS=nasm
 ASFLAGS=-f bin
 
+WATCOM=docker run --rm -t -v $(shell pwd):/src dockerhy/watcom-docker:latest 
 
+WATCOM_C=${WATCOM} wcl
+WATCOM_CFLAGS=-0 -bc -bt=dos 
 
 .PHONY: all
-all: clean boot/boot.bin tool.com
+all: clean boot/boot.bin tool/tool.exe
 
 %.bin: %.s
 	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
 
-%.com: %.s
-	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
+#%.com: %.s
+#	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
 
+%.exe: %.c
+	${WATCOM_C} ${WATCOM_CFLAGS} -fe=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $^)
 
+tool/boot.c: boot/boot.bin
+	xxd -i $^ $@
+
+tool/tool.exe: tool/tool.c tool/boot.c
 
 .PHONY: real_image.img
 real_image.img: boot/boot.bin
@@ -20,9 +29,13 @@ real_image.img: boot/boot.bin
 
 .PHONY: clean
 clean:
-	rm -f boot/*.bin
-	rm -f boot/*.lst
-	rm -f *.com
+	find . -iname '*.bin' -exec rm {} \;
+	find . -iname '*.lst' -exec rm {} \; 
+	find . -iname '*.com' -exec rm {} \; 
+	find . -iname '*.exe' -exec rm {} \; 
+	find . -iname '*.o' -exec rm {} \; 
+
 	rm -f real_boot.img
+	rm -f tool/boot.c
 
 
