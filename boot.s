@@ -59,7 +59,20 @@ hdd_data_block:
   dw 0000h      ; Cylinder number for landing zone
   db 0h         ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
 
-HDD_DATA_BLOCK_SIZE equ ($$ - hdd_data_block)
+; Testing values for dosbox-x 
+;  dw 0383h      ; Number of cylinders
+;  db 0Fh        ; Number of heads (This might max out at 0Fh
+;  dw 0000h      ; Starting reduced write current cylinder
+;  dw 0FFFFh     ; Starting write precompensation cylinder number
+;  db 00h        ; Maximum ECC burst length
+;  db 0C8h       ; Control byte - 00h -> 3ms, 04h -> 200ms, 05h -> 70ms, 06h -> 3ms, 07h -> 3ms
+;  db 00h        ; Standard timeout
+;  db 00h        ; Fromatting timeout
+;  db 00h        ; Timeout for checking drive
+;  dw 0383h      ; Cylinder number for landing zone
+;  db 11h        ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+
+HDD_DATA_BLOCK_SIZE equ ($ - hdd_data_block)
 
   ;; Setup and copy the boot sector from 7C00h to the traditional
   ;; 0600h
@@ -111,10 +124,12 @@ patch_bios:
   write_message loaded_msg
 
   ;; Save of the original hdd data vector
-  mov ax, [ss:HDD_DATA_OFFSET]
-  mov [cs:0000h], ax
-  mov ax, [ss:HDD_DATA_SEGMENT]
-  mov [cs:00002h], ax
+  mov ax, [ss:HDD_DATA_OFFSET]   ; Load the original hdd table offset.
+  mov [cs:0000h], ax             ; Preserve it in case we need to restore it later.
+  mov di, ax                     ; Setup di for the compare.
+  mov ax, [ss:HDD_DATA_SEGMENT]  ; Load the original hdd table segment.
+  mov [cs:00002h], ax            ; Preserve it in case we need to restore it later.
+  mov es, ax                     ; Setup es for the compare.
 
   ;; Check if the bios already mathces our specs.
   ;; We're going to go byte by byte and compare hdd_data_block
@@ -124,9 +139,9 @@ patch_bios:
   mov cx, HDD_DATA_BLOCK_SIZE ; Get the size of the data block
 
   ;; Setup the bios data block for compare
-  mov di, [cs:HDD_DATA_OFFSET]
-  mov ax, [cs:HDD_DATA_SEGMENT]
-  mov es, ax
+;  mov di, [ss:HDD_DATA_OFFSET]
+;  mov ax, [ss:HDD_DATA_SEGMENT]
+;  mov es, ax
 
 
   ;; Setup our hdd data block for compare
@@ -140,7 +155,7 @@ patch_bios:
   jmp .apply_patch
   
 
-.real_boot_notify
+.real_boot_notify:
   write_message not_patched_msg
   
   jmp .real_boot
