@@ -40,9 +40,9 @@ DEBUG equ 4h
 %include "partition.inc"
 
 main:
-   jmp init_entry ; Jump to the real entry point
-  dw patch_bios ; Used to setup a far pointer further down    
-
+  ;; We're relying on the jmp being 2 bytes
+  jmp init_entry ; Jump to the real entry point
+  dw 0000h
 
   ;; The bios data block used to set hardisk parameters
   ;; See: https://fd.lod.bz/rbil/interrup/bios/41.html
@@ -54,40 +54,41 @@ hdd_data_block:
   db 0Bh        ; Maximum ECC burst length
   db 05h        ; Control byte - 00h -> 3ms, 04h -> 200ms, 05h -> 70ms, 06h -> 3ms, 07h -> 3ms
   db 63h        ; Standard timeout
-  db 0FFh        ; Fromatting timeout
+  db 0FFh       ; Fromatting timeout
   db 73h        ; Timeout for checking drive
   dw 0000h      ; Cylinder number for landing zone
-  db 0h          ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+  db 0h         ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+
+HDD_DATA_BLOCK_SIZE equ ($$ - hdd_data_block)
 
   ;; Setup and copy the boot sector from 7C00h to the traditional
   ;; 0600h
 
 init_entry:
 
-   cli                  ; Disable interrupts
-   xor ax, ax           ; Zero ax
-   mov ss, ax           ; Set the stack segment to zero
-   mov sp, BIOS_LOADED  ; Set the stack pointer to directly above where bios loaded us.
-   mov si, sp           ; Set the source index to where bios loaded us.
-   mov ds, ax           ; Setup ds
+  cli                  ; Disable interrupts
+  xor ax, ax           ; Zero ax
+  mov ss, ax           ; Set the stack segment to zero
+  mov sp, BIOS_LOADED  ; Set the stack pointer to directly above where bios loaded us.
+  mov si, sp           ; Set the source index to where bios loaded us.
+  mov ds, ax           ; Setup ds
 
   ;; Now we need to calculate where we're going to store the bios block
   mov ax, [FREE_MEM]   ; Load the number of free kilobyes of memory.
-  sub ax, 1h           ; Take 1k for this code
-  mov [FREE_MEM], ax   ; Save the updated value back to bios data so we don't get clobbered
+  sub ax, 1h           ; Subtract 1k, we'll officially steal it later if we need it. 
 
-  mov dx, 0400h         ; 1k
+  mov dx, 0400h        ; 1k
   mul dx               ; Get the value in the number of bytes and store it in dx:ax
 
-  mov cl, 0Ch           ; We need to shift dx left 12 bits
+  mov cl, 0Ch          ; We need to shift dx left 12 bits
   shl dx, cl
-  mov cl, 04h           ; We need to shift ax right 4 bits
+  mov cl, 04h          ; We need to shift ax right 4 bits
   shr ax, cl
   
   or ax, dx            ; This gives us the segment address for the last 1k of ram
 
-   mov es, ax           ; Setup es
-   sti                  ; Enable interrupts.
+  mov es, ax           ; Setup es
+  sti                  ; Enable interrupts.
 
   ;; Sacrifice the jmp and padding at the start of this code to get a far pointer for the
   ;; jump. We need to do this before the copy, because it's very tricky to get the address
@@ -97,27 +98,73 @@ init_entry:
   mov [BIOS_LOADED], dx
   
   cld
-   mov DI, BOOT_SHADOW
-   mov cx, 0100h ; copy the whole boot sector (We're copying words so this is 2 bytes at a time.)
-   rep movsw
+  mov DI, BOOT_SHADOW
+  mov cx, 0100h ; copy the whole boot sector (We're copying words so this is 2 bytes at a time.)
+  rep movsw
 
-   ; Jump to the copied code.
-   ; Note: this address shows up incorrectly in the lst file for some reason.
-   jmp far [ES:0000]
+  ; Jump to the copied code.
+  ; Note: this address shows up incorrectly in the lst file for some reason.
+  jmp far [ES:0000h]
   
 
 patch_bios:
-  xor ax, ax  
-  mov ds, ax
+  write_message loaded_msg
+
+  ;; Save of the original hdd data vector
+  mov ax, [ss:HDD_DATA_OFFSET]
+  mov [cs:0000h], ax
+  mov ax, [ss:HDD_DATA_SEGMENT]
+  mov [cs:00002h], ax
+
+  ;; Check if the bios already mathces our specs.
+  ;; We're going to go byte by byte and compare hdd_data_block
+  ;; to the bios table. If they match, we're good, otherwise,
+  ;; we need to patch the bios.
+
+  mov cx, HDD_DATA_BLOCK_SIZE ; Get the size of the data block
+
+  ;; Setup the bios data block for compare
+  mov di, [cs:HDD_DATA_OFFSET]
+  mov ax, [cs:HDD_DATA_SEGMENT]
   mov es, ax
+
+
+  ;; Setup our hdd data block for compare
+  mov bx, cs
+  mov ds, bx
+  mov si, hdd_data_block
+
+  cld
+  repe cmpsb
+  jcxz .real_boot_notify
+  jmp .apply_patch
+  
+
+.real_boot_notify
+  write_message not_patched_msg
+  
+  jmp .real_boot
+
+.apply_patch: 
+  ;; This should protect the patch data from being overwritten by the OS.
+
+  mov ax, [ss:FREE_MEM]   ; Load the number of free kilobyes of memory.
+  sub ax, 1h           ; Take 1k for this code
+  mov [ss:FREE_MEM], ax   ; Save the updated value back to bios data so we don't get clobbered
 
   ;; Update the interrupt vector
   mov ax, hdd_data_block
-  mov [HDD_DATA_OFFSET], ax
+  mov [ss:HDD_DATA_OFFSET], ax
   mov ax, cs
-  mov [HDD_DATA_SEGMENT], ax
+  mov [ss:HDD_DATA_SEGMENT], ax
 
-  write_message loaded_msg
+  write_message patched_msg
+
+
+.real_boot:
+  xor ax, ax            ; reset ds to 0000h
+  mov es, ax
+  mov ds, ax 
 
 ;; Now we attempt to actually boot a partition
   mov si, part_table    ; Address of the partition table
@@ -141,14 +188,15 @@ patch_bios:
 
 attempt_boot:
   ;; if we get here, we've found a seemingly valid partiton to boot.
-  mov dx, [cs:si]          ; This should put the drive in dh and the head for the start
+  mov dx, [cs:si]       ; This should put the drive in dh and the head for the start
                         ; of the partition in dl 
-  mov cx, [cs:si + 02h]    ; This should put the starting cylinder in ch and
+  mov cx, [cs:si + 02h] ; This should put the starting cylinder in ch and
                         ; first sector in cl
   mov bp, si            ; Save offset of the Active partition table entry to pass to the
                         ; Volume Boot Sector.
 
   mov di, 0005h         ; We'll try booting 5 times
+
 .retry_loop:
   mov bx, BIOS_LOADED   ; Put the boot sector where the bios was supposed to.
   mov ax, 0201h         ; load one sector.
@@ -173,11 +221,10 @@ attempt_boot:
   jmp $ 
 
 .loaded_fine:
-  write_message booting_msg
-
   mov di, BIOS_LOADED + 01FEh   ; Point to the laster word of the boot sector
   cmp word [di], 0AA55h          ; Check for a boot sector signature.
   jnz missing_os
+
 
   mov si, bp                    ; This is used by the OS Boot code to find
                                 ; the offset of the Active Partition Entry
@@ -207,12 +254,16 @@ output_message:
   pop ds
   ret
 
-booting_msg:
-  db "Booting..."
+loaded_msg:
+  db "HDD Patch: "
+  db 00h
+
+patched_msg:
+  db "Loaded."
   db 0Dh, 0Ah, 00h
 
-loaded_msg:
-  db "XTA2SD - Tandy 1110HD HDD Size Patch Loaded."
+not_patched_msg:
+  db "Not needed."
   db 0Dh, 0Ah, 00h
 
 invalid_msg:
@@ -228,7 +279,7 @@ no_more_retries:
   db 0Dh, 0Ah, 00h
 
 missing_os_msg:
-  db "Missing operating system."
+  db "Missing OS!"
   db 0Dh, 0Ah, 00h
 
   setloc PART_TABLE
