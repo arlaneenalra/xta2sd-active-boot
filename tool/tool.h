@@ -4,14 +4,15 @@
 #include <unistd.h>
 #include <stdint.h>
 
-
-int usage();
-int parse_arguments(int argc, char **argv);
-
+typedef struct config_type {
+  uint8_t drive;
+  uint8_t dump;
+} config_t;
 
 /**
  * Allows accessing the segment and offset addresses of an interrupt vector.
- * They are reall just far pointers in the end.
+ * They are reall just far pointers in the end. There's probably a better way
+ * to do this, but this does work.
  */
 typedef struct segment_offset_type {
   uint16_t offset;
@@ -39,5 +40,11 @@ typedef struct hdd_data_block_type {
   uint8_t reserved;
 } hdd_data_block_t;
 
+int usage();
+int parse_arguments(int argc, char **argv, config_t *config);
+uint8_t read_boot_sector(uint8_t drive, void __far *buf);
+
+#define DRIVE_0 0x80
+#define DRIVE_1 0x81
 
 #endif
