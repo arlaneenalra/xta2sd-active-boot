@@ -1,6 +1,8 @@
 *.lst
 *.bin
 *.com
+*.exe
+*.o
 tool/boot.c
 real_boot.img
 boot.img
