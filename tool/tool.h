@@ -115,6 +115,7 @@ typedef union mbr_buffer_type {
 } mbr_t;
 
 int usage();
+void nasty_warning();
 int parse_arguments(int argc, char **argv, config_t *config);
 
 uint8_t read_boot_sector(uint8_t drive, void __far *buf);

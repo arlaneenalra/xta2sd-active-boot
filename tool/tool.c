@@ -38,6 +38,27 @@ void dump_sector(uint8_t __far *buf) {
 }
 
 /**
+ * Warns the user that taking this action could result in data loss gives
+ * them a chance to back out. Does not return if the user says no.
+ */
+void nasty_warning() {
+  int c;
+
+  printf("Warning! Warning! Warning!\n");
+  printf("  This operation has may cause loss of data on the target drive!\n");
+  printf("  Make sure you have a back up prior to completing this operaton.\n");
+  printf("Warning! Warning! Warning!\n");
+  printf("\n");
+  printf("Do you wish to proceed? (press 'Y' to continue and any other key to abort.)\n");
+
+  c = getch();
+  if (c != 'y' && c != 'Y') {
+    printf("You pressed %c, aborting.\n", c);
+    exit(1);
+  }
+}
+
+/**
  * Output a usage statment and exit.
  */
 int usage() {
@@ -124,8 +145,13 @@ uint8_t write_mbr(config_t *config, mbr_t *original) {
       sizeof(partition_entry_t) * 4);
 
 
-  printf("Found existing partion table:\n");
+  printf("Found existing partition table:\n");
   print_partition_table(write_buf.mbr.partition_table);
+
+  // Give users a chance to back out before nuking their drive. 
+  nasty_warning();
+
+  printf("Writing active boot sector...\n");
 
   // Actually write the boot sector. 
   status = write_boot_sector(config->drive, &write_buf);
@@ -133,6 +159,10 @@ uint8_t write_mbr(config_t *config, mbr_t *original) {
   if (status) {
     printf("Error writing boot sector %02X -> %s\n", status, translate_error(status));
   }
+
+  printf("Done!\n");
+
+  printf("A reboot is necessary for these changes to take effect.\n");
 
   return status;
 }
