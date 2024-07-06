@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
   status = read_boot_sector(config.drive, &sector_buf.buffer);
 
   if (status != 0) {
-    printf("Error %02X\n", status);
+    printf("Error %02X -> %s\n", status, translate_error(status));
     printf("Aborting!\n");
     
     // If we can't read the disk, there's nothing we can do.

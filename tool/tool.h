@@ -101,8 +101,8 @@ typedef struct boot_sector_type {
  * Macros for reading CHS values from on disk form.
  */
 #define CHS_HEAD(chs) chs[0]
-#define CHS_CYLINDER(chs) (((chs[1] & 0xB0) << 2) + chs[2])
 #define CHS_SECTOR(chs) (chs[1] & 0x3F)
+#define CHS_CYLINDER(chs) ((((uint16_t)chs[1] & 0xC0) << 2) + chs[2])
 
 /**
  * Union type for dealing with the raw boot sector.
@@ -115,6 +115,8 @@ typedef union mbr_buffer_type {
 int usage();
 int parse_arguments(int argc, char **argv, config_t *config);
 uint8_t read_boot_sector(uint8_t drive, void __far *buf);
+
+const char *translate_error(uint8_t err_code);
 
 void print_partition_table(partition_entry_t *table);
 
