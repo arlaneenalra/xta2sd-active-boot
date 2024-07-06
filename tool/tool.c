@@ -47,7 +47,11 @@ int usage() {
   printf("\n");
   printf("  /f   Force the issue.\n");
   printf("  /d # Drive to operate on.\n");
-  printf("  /r   Dump the loaded boot sector as hex.\n"); 
+  printf("  /r   Dump the loaded boot sector as hex.\n");
+  printf("  /p   Output current partition table.\n");
+  printf("  /w   Overwrite the boot sector with our active version.\n");
+  printf("       By default, this preserves the existing partition\n");
+  printf("       table.");
   printf("\n");
 
   return 1;
@@ -58,7 +62,7 @@ int parse_arguments(int argc, char **argv, config_t *config) {
   int c;
 
   // See: https://open-watcom.github.io/open-watcom-v2-wikidocs/clib.html#getopt
-  while((c = getopt(argc, argv, "fd:r")) != -1) {
+  while((c = getopt(argc, argv, "fd:rpw")) != -1) {
     parsed++;
     switch(c) {
       case 'f':
@@ -73,6 +77,14 @@ int parse_arguments(int argc, char **argv, config_t *config) {
       case 'r':
         // Read the boot sector and dump it as raw hex
         config->dump = 1;
+        break;
+      
+      case 'p':
+        config->output_partition_table = 1;
+        break;
+
+      case 'w':
+        config->write = 1;
         break;
 
       case ':':
@@ -89,11 +101,47 @@ int parse_arguments(int argc, char **argv, config_t *config) {
 
   return 0;
 }
+
+/**
+ * Updates the on disk MBR with our active one preserving the
+ * existing partition table.
+ */
+uint8_t write_mbr(config_t *config, mbr_t *original) {
+  uint8_t status;
+  mbr_t write_buf;
+
+  if (sizeof(mbr_t) != boot_boot_bin_len) {
+    printf("FATAL ERROR: MBR structure and Boot Sector are not the same size!!!\n");
+    printf("MBR Struct %u Boot Sector %u\n", sizeof(mbr_t), boot_boot_bin_len);
+  }
+  
+  memcpy(write_buf.buffer, boot_boot_bin, sizeof(mbr_t));
+ 
+  // Copy the partition table over from the original boot sector.
+  memcpy(
+      write_buf.mbr.partition_table,
+      (original->mbr.partition_table),
+      sizeof(partition_entry_t) * 4);
+
+
+  printf("Found existing partion table:\n");
+  print_partition_table(write_buf.mbr.partition_table);
+
+  // Actually write the boot sector. 
+  status = write_boot_sector(config->drive, &write_buf);
+
+  if (status) {
+    printf("Error writing boot sector %02X -> %s\n", status, translate_error(status));
+  }
+
+  return status;
+}
  
 int main(int argc, char **argv) {
   config_t config = {
     0x00, // set drive to point at the first hard drive. 
-    0x00  // default to not dumping the sector.
+    0x00,  // default to not dumping the sector.
+    0x00 
   };
 
   mbr_t sector_buf;
@@ -130,10 +178,20 @@ int main(int argc, char **argv) {
     printf("Success!\n");
   }
 
-  print_partition_table(sector_buf.mbr.partition_table);
+  if (config.output_partition_table) {
+    print_partition_table(sector_buf.mbr.partition_table);
+  } 
 
   if (config.dump) { 
     dump_sector(&sector_buf.buffer);
+  }
+
+  if (config.write) {
+    status = write_mbr(&config, &sector_buf);
+
+    if (status) {
+      return 1; 
+    } 
   }
 
   return 0;

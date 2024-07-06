@@ -7,6 +7,8 @@
 typedef struct config_type {
   uint8_t drive;
   uint8_t dump;
+  uint8_t output_partition_table;
+  uint8_t write;
 } config_t;
 
 /**
@@ -114,11 +116,15 @@ typedef union mbr_buffer_type {
 
 int usage();
 int parse_arguments(int argc, char **argv, config_t *config);
-uint8_t read_boot_sector(uint8_t drive, void __far *buf);
 
+uint8_t read_boot_sector(uint8_t drive, void __far *buf);
+uint8_t write_boot_sector(uint8_t drive, void __far *buf);
 const char *translate_error(uint8_t err_code);
 
 void print_partition_table(partition_entry_t *table);
+
+uint8_t write_mbr(config_t *config, mbr_t *original);
+
 
 #define DRIVE_0 0x80
 #define DRIVE_1 0x81
