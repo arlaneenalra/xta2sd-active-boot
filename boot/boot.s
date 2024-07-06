@@ -58,6 +58,7 @@ hdd_data_block:
   db 73h        ; Timeout for checking drive
   dw 0000h      ; Cylinder number for landing zone
   db 0h         ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+	db 0h         ; Reserved
 
 ; Testing values for dosbox-x 
 ;  dw 0383h      ; Number of cylinders
@@ -71,6 +72,7 @@ hdd_data_block:
 ;  db 00h        ; Timeout for checking drive
 ;  dw 0383h      ; Cylinder number for landing zone
 ;  db 11h        ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+;  db 0h         ; Reserved
 
 HDD_DATA_BLOCK_SIZE equ ($ - hdd_data_block)
 

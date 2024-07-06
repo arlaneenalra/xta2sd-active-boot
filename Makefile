@@ -12,9 +12,6 @@ all: clean boot/boot.bin tool/tool.exe
 %.bin: %.s
 	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
 
-#%.com: %.s
-#	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
-
 %.exe: %.c
 	${WATCOM_C} ${WATCOM_CFLAGS} -fe=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $^)
 
@@ -24,7 +21,7 @@ tool/boot.c: boot/boot.bin
 tool/tool.exe: tool/tool.c tool/boot.c
 
 .PHONY: real_image.img
-real_image.img: boot/boot.bin
+real_image.img: boot.img boot/boot.bin
 	cat ./boot/boot.bin ./boot.img > ./real_boot.img
 
 .PHONY: clean
