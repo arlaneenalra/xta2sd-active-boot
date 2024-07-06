@@ -12,8 +12,9 @@ all: clean boot/boot.bin tool/tool.exe
 %.bin: %.s
 	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
 
-%.exe: %.c
-	${WATCOM_C} ${WATCOM_CFLAGS} -fe=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $^)
+%.exe: %.c tool/tool.h
+	${WATCOM_C} ${WATCOM_CFLAGS} -fe=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $(filter %.c, $^))
+
 
 tool/boot.c: boot/boot.bin
 	xxd -i $^ $@
