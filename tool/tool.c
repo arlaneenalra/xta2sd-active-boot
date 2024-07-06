@@ -95,11 +95,12 @@ int main(int argc, char **argv) {
     0x00, // set drive to point at the first hard drive. 
     0x00  // default to not dumping the sector.
   };
-  uint8_t sector_buf[1024];
+
+  mbr_t sector_buf;
   uint8_t status;
 
   // zero out the sector buffer
-  memset(sector_buf, 0, sizeof(sector_buf));
+  memset(&sector_buf, 0, sizeof(sector_buf));
   
   if (parse_arguments(argc, argv, &config)) {
     return usage();  
@@ -113,20 +114,26 @@ int main(int argc, char **argv) {
   printf("Bios is currently reporting %uK conventional memory free.\n",
       *memory_size);
 
- 
   // Check to see if we can read from sector 0, 0, 0 on the primary
   // hard drive.
-  printf("Loading boot sector from %u:\n", config.drive);
+  printf("Loading boot sector from fixed disk %u: ", config.drive);
  
-
-  status = read_boot_sector(config.drive, sector_buf);
+  status = read_boot_sector(config.drive, &sector_buf.buffer);
 
   if (status != 0) {
-    printf("Error reading existing boot sector: %02X\n", status);
+    printf("Error %02X\n", status);
+    printf("Aborting!\n");
+    
+    // If we can't read the disk, there's nothing we can do.
+    return 1;
+  } else {
+    printf("Success!\n");
   }
 
+  print_partition_table(sector_buf.mbr.partition_table);
+
   if (config.dump) { 
-    dump_sector(sector_buf);
+    dump_sector(&sector_buf.buffer);
   }
 
   return 0;
