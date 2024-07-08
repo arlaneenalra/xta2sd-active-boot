@@ -76,6 +76,9 @@ hdd_data_block:
 
 HDD_DATA_BLOCK_SIZE equ ($ - hdd_data_block)
 
+  dd 0AABBCCDDh  ; Used by dos tool to determing if the boot sector patch is
+                 ; present.
+
   ;; Setup and copy the boot sector from 7C00h to the traditional
   ;; 0600h
 
@@ -139,12 +142,6 @@ patch_bios:
   ;; we need to patch the bios.
 
   mov cx, HDD_DATA_BLOCK_SIZE ; Get the size of the data block
-
-  ;; Setup the bios data block for compare
-;  mov di, [ss:HDD_DATA_OFFSET]
-;  mov ax, [ss:HDD_DATA_SEGMENT]
-;  mov es, ax
-
 
   ;; Setup our hdd data block for compare
   mov bx, cs

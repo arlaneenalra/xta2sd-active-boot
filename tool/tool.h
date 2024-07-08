@@ -3,12 +3,25 @@
 
 #include <unistd.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
 
 typedef struct config_type {
+
   uint8_t drive;
-  uint8_t dump;
-  uint8_t output_partition_table;
-  uint8_t write;
+
+  bool dump;
+  bool output_partition_table;
+  bool ignore_partition_table;
+
+  // Actions  to take
+  bool write;
+  bool load_tsr;
+
+  // Some basic state values
+  bool mbr_active; 
+  bool tsr_active;
 } config_t;
 
 /**
@@ -27,12 +40,13 @@ typedef union far_ptr_type {
   void __far *ptr;
 } far_ptr_t;
 
+#pragma pack(__push, 1)
 typedef struct hdd_data_block_type {
   uint16_t cylinders;
   uint8_t heads;
   uint16_t reduced_write_cylinder;
   uint16_t write_precomp_cylinder;
-  uint8_t  max_ecc_burst;
+  uint8_t max_ecc_burst;
   uint8_t control_byte;
   uint8_t timeout;
   uint8_t format_timeout;
@@ -41,6 +55,24 @@ typedef struct hdd_data_block_type {
   uint8_t sectors_per_track;  // On the Tandy 1110HD this is hard set to 17 and the value is always 0.
   uint8_t reserved;
 } hdd_data_block_t;
+
+/**
+ * Data structure to represent the resident TSR part of the application when loaded.
+ */
+typedef struct tsr_resident_type {
+  hdd_data_block_t hdd_data;
+  uint32_t signature; // used to tell if the TSR is actually loaded or not.
+} tsr_resident_t;
+
+
+/**
+ * Way over simplified value used to identify the TSR in memory.
+ */
+#define TSR_SIGNATURE 0xAABBCCDD
+/**
+ * The offset into the MBR that we find the actuall hdd_data_table.
+ */
+#define MBR_TABLE_OFFSET 0x0004
 
 #define BOOTABLE 0x80
 #define NOT_BOOTABLE 0x00
@@ -79,13 +111,14 @@ typedef struct boot_sector_type {
    */
   far_ptr_t original_vector; // (4 bytes)
 
-  hdd_data_block_t hdd_data; // (17 bytes) The hdd data table for our patched boot sector.
+  hdd_data_block_t hdd_data; // (16 bytes) The hdd data table for our patched boot sector.
+  uint32_t signature; 
 
   /**
    * This should be the raw code of the boot sector. The partition table should
    * exist at 0x1BE, to find it correctly we need to add place holder dummy bytes.
    */
-  uint8_t __code[0x1BE - sizeof(far_ptr_t) - sizeof(hdd_data_block_t)];
+  uint8_t __code[0x1BE - sizeof(far_ptr_t) - sizeof(hdd_data_block_t) - sizeof(uint32_t)];
 
   /**
    * There are four slots for partitions in the partition table.
@@ -96,7 +129,7 @@ typedef struct boot_sector_type {
    * Boot sector signature. For a valid boot sector, this should always
    * be 0xAA55
    */
-  uint16_t signature;
+  uint16_t mbr_signature;
 } boot_sector_t;
 
 /**
@@ -114,6 +147,8 @@ typedef union mbr_buffer_type {
   uint8_t buffer[512];
 } mbr_t;
 
+#pragma pack(__pop)
+
 int usage();
 void nasty_warning();
 int parse_arguments(int argc, char **argv, config_t *config);
@@ -126,6 +161,12 @@ void print_partition_table(partition_entry_t *table);
 
 uint8_t write_mbr(config_t *config, mbr_t *original);
 
+far_ptr_t get_boot_sector_patch_ptr();
+bool is_boot_sector_patch_active();
+bool is_tsr_patch_active();
+bool is_drive_patched();
+
+void load_tsr();
 
 #define DRIVE_0 0x80
 #define DRIVE_1 0x81
