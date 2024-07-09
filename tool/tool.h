@@ -152,6 +152,7 @@ typedef union mbr_buffer_type {
 int usage();
 void nasty_warning();
 int parse_arguments(int argc, char **argv, config_t *config);
+void dump_sector(uint8_t __far *buf);
 
 uint8_t read_boot_sector(uint8_t drive, void __far *buf);
 uint8_t write_boot_sector(uint8_t drive, void __far *buf);
@@ -166,7 +167,7 @@ bool is_boot_sector_patch_active();
 bool is_tsr_patch_active();
 bool is_drive_patched();
 
-void load_tsr();
+void load_tsr(config_t *config, hdd_data_block_t *hdd_data);
 
 #define DRIVE_0 0x80
 #define DRIVE_1 0x81

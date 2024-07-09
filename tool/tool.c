@@ -192,7 +192,9 @@ int main(int argc, char **argv) {
   uint8_t status;
 
   //tsr_data_paragraphs = (0x100 + 15 + (uint16_t)&tsr_data_paragraphs) >> 4;
-  tsr_data_paragraphs = (0x100 + FP_OFF(&tsr_data_paragraphs) + 15) >> 4;
+  //tsr_data_paragraphs = (0x100 + FP_OFF(&tsr_data_paragraphs) + 15) >> 4;
+  //tsr_data_paragraphs = ((_psp - FP_OFF(&tsr_data_paragraphs)) + 15) >> 4;
+  tsr_data_paragraphs = 500;
 
   memset((void *)&config, 0, sizeof(config_t));
 

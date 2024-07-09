@@ -65,7 +65,7 @@ bool is_tsr_patch_active() {
  *  Load the TSR into memory and replace the boot sector patch if it was
  *  previously loaded.
  */
-void load_tsr(config_t *config, tsr_resident_t *tsr_in) {
+void load_tsr(config_t *config, hdd_data_block_t *hdd_data) {
   far_ptr_t env_block;
 
   env_block.vector.segment = _psp;
@@ -76,18 +76,29 @@ void load_tsr(config_t *config, tsr_resident_t *tsr_in) {
     return;
   }    
 
+  // Copy the data from tsr_in to the tsr_data structure.
+  memcpy(
+      &(tsr_data.hdd_data),
+      hdd_data,
+      sizeof(hdd_data_block_t));
+
   // Make sure we set the signature first.
   tsr_data.signature = TSR_SIGNATURE;
 
-  // Copy the data from tsr_in to the tsr_data structure.
-  memcpy(&(tsr_data.hdd_data), &(tsr_in->hdd_data), sizeof(hdd_data_block_t));
+  dump_sector((uint8_t *)&tsr_data);
 
   printf("Old table at %04X:%04X\n",
       hdd_table_ptr->vector.segment,
-      hdd_table_ptr->vector.offset);
+      hdd_table_ptr->vector.offset,
+      sizeof(hdd_data_block_t));
 
   // Setup the hdd data table pointer
-  hdd_table_ptr->ptr = (void __far *)&(tsr_data);
+  hdd_table_ptr->ptr = &(tsr_data);
+
+  printf("New table at %04X:%04X\n",
+      hdd_table_ptr->vector.segment,
+      hdd_table_ptr->vector.offset,
+      sizeof(hdd_data_block_t));
 
   // Clear the MBR patch if it was active
   if (config->mbr_active) {
@@ -97,6 +108,7 @@ void load_tsr(config_t *config, tsr_resident_t *tsr_in) {
     *memory_size += 1;
   }
 
+  printf("PSP %08lX\n", (void __far *)_psp);
   printf("TSR patch loaded at %08lX\n", (void __far *)&tsr_data);
 
   // Free the environment block
