@@ -9,8 +9,6 @@
 #pragma data_seg("BEGTEXT", "BEGDATA")
 #pragma code_seg("BEGTEXT", "BEGDATA")
 
-uint16_t blue;
-
 /**
  * The only part of the TSR that need to stay in memory.
  */
