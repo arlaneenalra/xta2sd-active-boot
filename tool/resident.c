@@ -6,8 +6,8 @@
  */
 //#pragma data_seg("BEGTEXT", "CODE")
 //#pragma code_seg("BEGTEXT", "CODE")
-#pragma data_seg("BEGTEXT", "BEGDATA")
-#pragma code_seg("BEGTEXT", "BEGDATA")
+#pragma data_seg("ResidentData", "RDATA")
+#pragma code_seg("ResidentCode", "RDATA")
 
 /**
  * The only part of the TSR that need to stay in memory.

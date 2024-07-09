@@ -2,6 +2,7 @@
 *.bin
 *.com
 *.exe
+*.map
 *.o
 tool/boot.c
 real_boot.img

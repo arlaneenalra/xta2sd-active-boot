@@ -6,11 +6,19 @@ WATCOM=docker run --rm -t -v $(shell pwd):/src watcom
 
 WATCOM_C=${WATCOM} wcl
 #WATCOM_CFLAGS=-0 -bc -bt=dos 
-WATCOM_CFLAGS=-0 -bt=dos -c
+WATCOM_CFLAGS=-0 -bt=dos -c -s
 
 WATCOM_LD=${WATCOM} wlink
-#WATCOM_LDFLAGS=SYSTEM dos ORDER CLNAME RDATA SEGMENT ResidentData CLNAME CODE
-WATCOM_LDFLAGS=SYSTEM dos 
+WATCOM_LDFLAGS=SYSTEM dos OPTION DOSSEG DEBUG DWARF \
+							 ORDER CLNAME RDATA SEGMENT ResidentData \
+							       CLNAME CODE SEGMENT ResidentCode SEGMENT ResidentEnd SEGMENT _TEXT SEGMENT BEGTEXT \
+                     CLNAME FAR_DATA \
+										 CLNAME BEGDATA SEGMENT _NULL SEGMENT _AFTERNULL \
+										 CLNAME DATA \
+										 CLNAME BSS \
+										 CLNAME STACK
+
+#WATCOM_LDFLAGS=SYSTEM dos OPTION DOSSEG DEBUG DWARF
 
 .PHONY: all
 all: boot/boot.bin tool/tool.exe
@@ -19,7 +27,7 @@ all: boot/boot.bin tool/tool.exe
 	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
 
 %.exe: %.o
-	${WATCOM_LD} ${WATCOM_LDFLAGS} NAME $(patsubst %,/src/%, $@) FILE {$(patsubst %, /src/%, $^)}
+	${WATCOM_LD} NAME $(patsubst %,/src/%, $@) ${WATCOM_LDFLAGS} OPTION MAP=$(patsubst %,/src/%.map, $@) FILE {$(patsubst %, /src/%, $^)}
 #	${WATCOM_C} ${WATCOM_CFLAGS} -fe=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $(filter %.c, $^))
 
 
@@ -43,6 +51,7 @@ clean:
 	find . -iname '*.lst' -exec rm {} \; 
 	find . -iname '*.com' -exec rm {} \; 
 	find . -iname '*.exe' -exec rm {} \; 
+	find . -iname '*.map' -exec rm {} \; 
 	find . -iname '*.o' -exec rm {} \; 
 
 	rm -f tool/boot.c
