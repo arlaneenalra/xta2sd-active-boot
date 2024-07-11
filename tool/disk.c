@@ -139,7 +139,6 @@ uint8_t read_boot_sector(uint8_t drive, void __far *buf) {
   // Drive to read. Hard drives are always above 0x80
   regs.h.dl = 0x80 + drive; 
  
-  // 
   regs.w.bx = buf_ptr.vector.offset;
   sregs.es = buf_ptr.vector.segment;
 

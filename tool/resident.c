@@ -4,8 +4,6 @@
  * Setup a resident data block for our TSR version.
  * See: https://forum.vcfed.org/index.php?threads/tsr-programs-with-open-watcom.23586/ for details.
  */
-//#pragma data_seg("BEGTEXT", "CODE")
-//#pragma code_seg("BEGTEXT", "CODE")
 #pragma data_seg("ResidentData", "RDATA")
 #pragma code_seg("ResidentCode", "RDATA")
 

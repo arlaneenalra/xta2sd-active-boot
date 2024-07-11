@@ -4,9 +4,8 @@ ASFLAGS=-f bin
 #WATCOM=docker run --rm -t -v $(shell pwd):/src dockerhy/watcom-docker:latest 
 WATCOM=docker run --rm -t -v $(shell pwd):/src watcom
 
-WATCOM_C=${WATCOM} wcl
-#WATCOM_CFLAGS=-0 -bc -bt=dos 
-WATCOM_CFLAGS=-0 -bt=dos -c -s
+WATCOM_C=${WATCOM} wcc
+WATCOM_CFLAGS=-0 -bt=dos
 
 WATCOM_LD=${WATCOM} wlink
 WATCOM_LDFLAGS=SYSTEM dos OPTION DOSSEG DEBUG DWARF \
@@ -28,7 +27,6 @@ all: boot/boot.bin tool/tool.exe
 
 %.exe: %.o
 	${WATCOM_LD} NAME $(patsubst %,/src/%, $@) ${WATCOM_LDFLAGS} OPTION MAP=$(patsubst %,/src/%.map, $@) FILE {$(patsubst %, /src/%, $^)}
-#	${WATCOM_C} ${WATCOM_CFLAGS} -fe=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $(filter %.c, $^))
 
 
 %.o: %.c tool/tool.h
@@ -37,7 +35,6 @@ all: boot/boot.bin tool/tool.exe
 tool/boot.c: boot/boot.bin
 	xxd -i $^ $@
 
-#tool/tool.exe: tool/resident.c tool/tool.c tool/boot.c tool/disk.c tool/tsr.c
 tool/tool.exe: tool/resident.o tool/tool.o tool/boot.o tool/disk.o tool/tsr.o
 
 

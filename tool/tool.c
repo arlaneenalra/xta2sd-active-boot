@@ -62,7 +62,6 @@ int usage() {
   printf("Usage:\n");
   printf("  tool [/f] [/d #] [/r]\n");
   printf("\n");
-  printf("  /f   Force the issue.\n");
   printf("  /d # Drive to operate on.\n");
   printf("  /r   Dump the loaded boot sector as hex.\n");
   printf("  /p   Output current partition table.\n");
@@ -83,13 +82,9 @@ int parse_arguments(int argc, char **argv, config_t *config) {
   int c;
 
   // See: https://open-watcom.github.io/open-watcom-v2-wikidocs/clib.html#getopt
-  while((c = getopt(argc, argv, "fd:rpwnt")) != -1) {
+  while((c = getopt(argc, argv, "d:rpwnt")) != -1) {
     parsed++;
     switch(c) {
-      case 'f':
-        printf("Forcing the issue.\n");
-        break;
-
       case 'd':
         // Drive can only be a byte value.
         config->drive = atoi(optarg) & 0xFF;
@@ -191,9 +186,7 @@ int main(int argc, char **argv) {
   mbr_t sector_buf;
   uint8_t status;
 
-  //tsr_data_paragraphs = (0x100 + 15 + (uint16_t)&tsr_data_paragraphs) >> 4;
   tsr_data_paragraphs = (0x100 + FP_OFF(&tsr_data_paragraphs) + 15) >> 4;
-  //tsr_data_paragraphs = ((_psp - FP_OFF(&tsr_data_paragraphs)) + 15) >> 4;
 
   memset((void *)&config, 0, sizeof(config_t));
 

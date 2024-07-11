@@ -85,21 +85,8 @@ void load_tsr(config_t *config, hdd_data_block_t *hdd_data) {
   // Make sure we set the signature first.
   tsr_data.signature = TSR_SIGNATURE;
 
-
-  printf("Old table at %04X:%04X\n",
-      hdd_table_ptr->vector.segment,
-      hdd_table_ptr->vector.offset);
-
   // Setup the hdd data table pointer
   hdd_table_ptr->ptr = &(tsr_data);
-
-  printf("New table at %04X:%04X\n",
-      hdd_table_ptr->vector.segment,
-      hdd_table_ptr->vector.offset);
-
-  printf("Seg %04X:%04X\n",
-      FP_SEG(&tsr_data),
-      FP_OFF(&tsr_data));
 
   // Clear the MBR patch if it was active
   if (config->mbr_active) {
@@ -108,9 +95,6 @@ void load_tsr(config_t *config, hdd_data_block_t *hdd_data) {
     // Give the claimed memory back
     *memory_size += 1;
   }
-
-  printf("PSP %08lX\n", (void __far *)_psp);
-  printf("TSR patch loaded at %08lX\n", (void __far *)&tsr_data);
 
   // Free the environment block
   if (_dos_freemem(*((uint16_t __far *)env_block.ptr))) {
