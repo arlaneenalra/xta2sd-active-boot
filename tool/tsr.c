@@ -52,10 +52,10 @@ bool is_tsr_patch_active() {
     return false;
   }
 
-  printf("TSR Signature is %04X:%04X -> %08lX\n", 
+  /*printf("TSR Signature is %04X:%04X -> %08lX\n", 
     hdd_table_ptr->vector.segment,
     hdd_table_ptr->vector.offset,
-    ((tsr_resident_t __far *)hdd_table_ptr->ptr)->signature);
+    ((tsr_resident_t __far *)hdd_table_ptr->ptr)->signature); */
 
   return ((tsr_resident_t __far *)hdd_table_ptr->ptr)
      ->signature == TSR_SIGNATURE;

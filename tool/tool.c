@@ -3,6 +3,7 @@
 #include <dos.h>
 
 #include "tool.h"
+#include "version.h"
 
 /**
  * Reference to precompiled bootsector.
@@ -185,6 +186,14 @@ int main(int argc, char **argv) {
   config_t config;
   mbr_t sector_buf;
   uint8_t status;
+
+  printf("Active Boot Sector Version: %s\n", VERSION);
+  printf("Copyright (c) 2024 Chris Salch\n");
+  printf("This program comes with ABSOLUTELY NO WARRANTY!\n");
+  printf("This is free software, and you are welcome to redistribute it\n");
+  printf("under certain conditions.  For details see the accompanying\n");
+  printf("LICENSE.TXT file or visit https://www.gnu.org/licenses/gpl-3.0.html.\n");
+  printf("--------------------------------------------------------------------\n");
 
   tsr_data_paragraphs = (0x100 + FP_OFF(&tsr_data_paragraphs) + 15) >> 4;
 
