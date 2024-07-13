@@ -1,0 +1,20 @@
+name: CI Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  mainline-build:
+    runs-on: ghcr.io/arlaneenalra/watcom-docker
+
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: make -j 5 WATCOM= 
+      

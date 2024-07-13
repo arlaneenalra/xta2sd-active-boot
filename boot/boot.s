@@ -35,9 +35,9 @@ DEBUG equ 4h
   call output_message
 %endmacro
 
-%include "debug.inc"
-%include "macro.inc"
-%include "partition.inc"
+%include "boot/debug.inc"
+%include "boot/macro.inc"
+%include "boot/partition.inc"
 
 main:
   ;; We're relying on the jmp being 2 bytes
@@ -58,6 +58,7 @@ hdd_data_block:
   db 73h        ; Timeout for checking drive
   dw 0000h      ; Cylinder number for landing zone
   db 0h         ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+  db 0h         ; Reserved
 
 ; Testing values for dosbox-x 
 ;  dw 0383h      ; Number of cylinders
@@ -71,8 +72,12 @@ hdd_data_block:
 ;  db 00h        ; Timeout for checking drive
 ;  dw 0383h      ; Cylinder number for landing zone
 ;  db 11h        ; Number of sectors per track (AT only locked at 17 on Tandy 1110HD)
+;  db 0h         ; Reserved
 
 HDD_DATA_BLOCK_SIZE equ ($ - hdd_data_block)
+
+  dd 0AABBCCDDh  ; Used by dos tool to determing if the boot sector patch is
+                 ; present.
 
   ;; Setup and copy the boot sector from 7C00h to the traditional
   ;; 0600h
@@ -137,12 +142,6 @@ patch_bios:
   ;; we need to patch the bios.
 
   mov cx, HDD_DATA_BLOCK_SIZE ; Get the size of the data block
-
-  ;; Setup the bios data block for compare
-;  mov di, [ss:HDD_DATA_OFFSET]
-;  mov ax, [ss:HDD_DATA_SEGMENT]
-;  mov es, ax
-
 
   ;; Setup our hdd data block for compare
   mov bx, cs
