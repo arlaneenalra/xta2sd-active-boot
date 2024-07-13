@@ -44,7 +44,7 @@ tool/boot.c: boot/boot.bin
 
 tool/tool.exe: tool/resident.o tool/tool.o tool/boot.o tool/disk.o tool/tsr.o
 
-src.zip: Makefile LICENSE.txt README.md ${TOOL_SRC} ${BOOT_SRC}
+src.zip: Makefile LICENSE.txt README.md ${TOOL_SRC} ${BOOT_SRC} scripts/write-version.sh
 	zip $@ $^ 
 
 tool.zip: LICENSE.txt README.md tool/tool.exe boot/boot.bin
