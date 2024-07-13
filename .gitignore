@@ -7,3 +7,6 @@
 tool/boot.c
 real_boot.img
 boot.img
+
+dist/
+*.zip
