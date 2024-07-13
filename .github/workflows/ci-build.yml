@@ -12,13 +12,11 @@ permissions:
   packages: write
 
 jobs:
-  mainline-build:
+  clone-and-find-tag:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/arlaneenalra/watcom-docker
 
     outputs:
-      latest_tag: ${{ steps.bump.outputs.new_version }} 
+      new_version: ${{ steps.bump.outputs.new_version }} 
 
     steps:
       - name: Check out the repo
@@ -37,19 +35,34 @@ jobs:
         id: bump
         uses: cbrgm/semver-bump-action@main
         with:
-          current-version: ${{ env.latest_tag }}
+          current-version: ${{ steps.current.outputs.latest_tag }}
           bump-level: minor
+
+
+  mainline-build:
+    needs: clone-and-find-tag
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/arlaneenalra/watcom-docker
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
 
       - name: Build and package everything
         run: |
-          echo "#pramga once\n#define VERSION "'"'"${{ steps.bump.outputs.new_version }}"'"'"\n" >> tool/version.h
+          echo "#pramga once\n#define VERSION "'"'"${{ needs.clone-and-find-tag.outputs.new_version }}"'"'"\n" >> tool/version.h
 
           make -j 5 WATCOM_DOCKER=  dist
 
   tag-release:
     runs-on: ubuntu-latest
 
-    needs: mainline-build
+    needs:
+      - mainline-build
+      - clone-and-find-tag
+
     if: github.ref == 'refs/heads/main'
 
     steps:
@@ -57,8 +70,8 @@ jobs:
         run: |
           git config --global user.email "release-bot@thenextbug.com"
           git config --global user.name "release-bot"
-          git commit -a -m "Tagging version ${{ needs.mainline-build.outputs.new_version }}"
-          git tag ${{ needs.mainline-build.outputs.new_version }}
+          git commit -a -m "Tagging version ${{ needs.clone-and-find-tag.outputs.new_version }}"
+          git tag ${{ needs.clone-and-find-tag.outputs.new_version }}
           git push --tags
 
       - name: Create release and upload artifacts
@@ -66,8 +79,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
-        run: gh release create ${{ needs.mainline-build.outputs.new_version }} --generate-notes --prerelease *.zip
+        run: gh release create ${{ needs.clone-and-find-tag.outputs.new_version }} --generate-notes --prerelease *.zip
 
-
-      
       
