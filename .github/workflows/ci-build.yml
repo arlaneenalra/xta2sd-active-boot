@@ -8,7 +8,9 @@ on:
 
 jobs:
   mainline-build:
-    runs-on: arlaneenalra/watcom-docker
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/arlaneenalra/watcom-docker
 
 
     steps:
