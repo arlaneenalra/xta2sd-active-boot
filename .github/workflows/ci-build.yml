@@ -52,7 +52,7 @@ jobs:
 
       - name: Build and package everything
         run: |
-          echo "#pramga once\n#define VERSION "'"'"${{ needs.clone-and-find-tag.outputs.new_version }}"'"'"\n" > tool/version.h
+          echo "#pragma once\n#define VERSION "'"'"${{ needs.clone-and-find-tag.outputs.new_version }}"'"'"\n" > tool/version.h
 
           make -j 5 WATCOM_DOCKER=  dist
 
