@@ -57,6 +57,8 @@ jobs:
           #define VERSION "${{ needs.clone-and-find-tag.outputs.new_version }}"
           EOD
 
+          cat tool/version.h
+
           make -j 5 WATCOM_DOCKER=  dist
 
   tag-release:
