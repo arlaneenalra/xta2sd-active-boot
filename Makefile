@@ -1,12 +1,12 @@
 AS=nasm
 ASFLAGS=-f bin
 
-WATCOM=docker run --pull=missing --rm -t -v $(shell pwd):/src arlaneenalra/watcom-docker 
+WATCOM_DOCKER=docker run --pull=missing --rm -t -v $(shell pwd):/src arlaneenalra/watcom-docker 
 
-WATCOM_C=${WATCOM} wcc
+WATCOM_C=${WATCOM_DOCKER} wcc
 WATCOM_CFLAGS=-0 -bt=dos
 
-WATCOM_LD=${WATCOM} wlink
+WATCOM_LD=${WATCOM_DOCKER} wlink
 WATCOM_LDFLAGS=SYSTEM dos OPTION DOSSEG DEBUG DWARF \
 							 ORDER CLNAME RDATA SEGMENT ResidentData \
 							       CLNAME CODE SEGMENT ResidentCode SEGMENT ResidentEnd SEGMENT _TEXT SEGMENT BEGTEXT \
