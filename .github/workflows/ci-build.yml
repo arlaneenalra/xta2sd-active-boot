@@ -8,8 +8,7 @@ on:
       - '*'
 
 permissions:
-  cotents: write
-  pull-requests: read
+  contents: write
   packages: write
 
 jobs:
