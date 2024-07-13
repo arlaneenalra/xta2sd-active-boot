@@ -8,7 +8,7 @@ on:
 
 jobs:
   mainline-build:
-    runs-on: ghcr.io/arlaneenalra/watcom-docker
+    runs-on: arlaneenalra/watcom-docker
 
 
     steps:
