@@ -1,7 +1,7 @@
 AS=nasm
 ASFLAGS=-f bin
 
-WATCOM=docker run --pull=missing --rm -t -v $(shell pwd):/src ghcr.io/arlaneenalra/watcom-docker 
+WATCOM=docker run --pull=missing --rm -t -v $(shell pwd):/src arlaneenalra/watcom-docker 
 
 WATCOM_C=${WATCOM} wcc
 WATCOM_CFLAGS=-0 -bt=dos
