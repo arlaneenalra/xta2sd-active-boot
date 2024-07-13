@@ -25,11 +25,11 @@ all: boot/boot.bin tool/tool.exe
 	${AS} ${ASFLAGS} -o $@ -l $*.lst $^
 
 %.exe: %.o
-	${WATCOM_LD} NAME $(patsubst %,/src/%, $@) ${WATCOM_LDFLAGS} OPTION MAP=$(patsubst %,/src/%.map, $@) FILE {$(patsubst %, /src/%, $^)}
+	${WATCOM_LD} NAME $@ ${WATCOM_LDFLAGS} OPTION MAP=$(patsubst %,%.map, $@) FILE { $^ }
 
 
 %.o: %.c tool/tool.h
-	${WATCOM_C} ${WATCOM_CFLAGS} -fo=$(patsubst %,/src/%, $@) $(patsubst %, /src/%, $(filter %.c, $^))
+	${WATCOM_C} ${WATCOM_CFLAGS} -fo=$@ $(filter %.c, $^)
 
 tool/boot.c: boot/boot.bin
 	xxd -i $^ $@
