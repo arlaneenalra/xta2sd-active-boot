@@ -2,6 +2,20 @@ name: CI Build
 
 on:
   workflow_dispatch:
+    inputs:
+      bump-level:
+        required: true
+        type: choice
+        description: 'The semver bump level'
+        options:
+          - 'major'
+          - 'minor'
+          - 'patch'
+          - 'premajor'
+          - 'preminor'
+          - 'prepatch'
+          - 'prerelease'
+        default: 'patch'
   push:
     branches:
       - main
@@ -36,7 +50,7 @@ jobs:
         uses: cbrgm/semver-bump-action@main
         with:
           current-version: ${{ steps.current.outputs.latest_tag }}
-          bump-level: minor
+          bump-level: ${{ github.event.inputs.bump-level }} 
 
 
   mainline-build:
