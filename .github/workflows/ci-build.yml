@@ -55,6 +55,13 @@ jobs:
           ./scripts/write-version.sh "${{ needs.clone-and-find-tag.outputs.new_version }}"
 
           make -j 5 WATCOM_DOCKER=  dist
+      
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributions 
+          path: *.zip 
+          retention-days: 5
 
   tag-release:
     runs-on: ubuntu-latest
@@ -66,6 +73,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
       - name: Tag new release 
         run: |
           git config --global user.email "release-bot@thenextbug.com"
@@ -74,11 +84,16 @@ jobs:
           git tag ${{ needs.clone-and-find-tag.outputs.new_version }}
           git push --tags
 
+      - name: Pull artifacts from build
+        uses: actions/download-artifacts@v4
+        with:
+          path: dist 
+
       - name: Create release and upload artifacts
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
 
-        run: gh release create ${{ needs.clone-and-find-tag.outputs.new_version }} --generate-notes --prerelease *.zip
+        run: gh release create ${{ needs.clone-and-find-tag.outputs.new_version }} --generate-notes --prerelease dist/*.zip
 
       
