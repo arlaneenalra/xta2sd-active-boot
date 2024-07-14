@@ -33,6 +33,12 @@ jobs:
       new_version: ${{ steps.bump.outputs.new_version }} 
 
     steps:
+      - name: Set default bump level
+        id: default
+        run: |
+          BUMP_LEVEL=${{ github.event.inputs.bump_level }}
+          echo "bump_level=${BUMP_LEVEL:-patch}" >> $GITHUB_OUTPUT
+
       - name: Check out the repo
         uses: actions/checkout@v4
 
@@ -50,7 +56,7 @@ jobs:
         uses: cbrgm/semver-bump-action@main
         with:
           current-version: ${{ steps.current.outputs.latest_tag }}
-          bump-level: ${{ github.event.inputs.bump-level }} 
+          bump-level: ${{ steps.default.outputs.bump_level }} 
 
 
   mainline-build:
