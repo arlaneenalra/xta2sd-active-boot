@@ -55,7 +55,13 @@ jobs:
           ./scripts/write-version.sh "${{ needs.clone-and-find-tag.outputs.new_version }}"
 
           make -j 5 WATCOM_DOCKER=  dist
-      
+     
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: version
+          path: tool/version.h
+
       - name: Upload distributions
         uses: actions/upload-artifact@v4
         with:
@@ -76,6 +82,12 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Pull artifacts from build
+        uses: actions/download-artifact@v4
+        with:
+          name: version
+          path: tool/version.h
+
       - name: Tag new release 
         run: |
           git config --global user.email "release-bot@thenextbug.com"
@@ -87,6 +99,7 @@ jobs:
       - name: Pull artifacts from build
         uses: actions/download-artifact@v4
         with:
+          name: distributions
           path: dist 
 
       - name: Create release and upload artifacts
