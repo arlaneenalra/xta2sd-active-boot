@@ -1,2 +1,2 @@
 #pragma once
-#define VERSION "local-build"
+#define VERSION "v0.1.2"
