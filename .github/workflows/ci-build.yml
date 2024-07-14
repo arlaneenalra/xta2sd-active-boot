@@ -56,7 +56,7 @@ jobs:
 
           make -j 5 WATCOM_DOCKER=  dist
      
-      - name: Upload distributions
+      - name: Upload version.h
         uses: actions/upload-artifact@v4
         with:
           name: version
@@ -85,8 +85,16 @@ jobs:
       - name: Pull artifacts from build
         uses: actions/download-artifact@v4.1.8
         with:
+          name: distributions
+          path: dist 
+          github-token: ${{ github.token }}
+
+      - name: Pull artifacts from build
+        uses: actions/download-artifact@v4.1.8
+        with:
           name: version
           path: tool/version.h
+          github-token: ${{ github.token }}
 
       - name: Tag new release 
         run: |
@@ -95,12 +103,6 @@ jobs:
           git commit -a -m "Tagging version ${{ needs.clone-and-find-tag.outputs.new_version }}"
           git tag ${{ needs.clone-and-find-tag.outputs.new_version }}
           git push --tags
-
-      - name: Pull artifacts from build
-        uses: actions/download-artifact@v4.1.8
-        with:
-          name: distributions
-          path: dist 
 
       - name: Create release and upload artifacts
         env:
