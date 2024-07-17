@@ -47,9 +47,9 @@ main:
   ;; The bios data block used to set hardisk parameters
   ;; See: https://fd.lod.bz/rbil/interrup/bios/41.html
 hdd_data_block:
-  dw 0384h      ; Number of cylinders
-  db 0Fh        ; Number of heads (This might max out at 0Fh
-  dw 0384h      ; Starting reduced write current cylinder
+  dw CYLINDERS  ; Number of cylinders
+  db HEADS      ; Number of heads (This might max out at 0Fh
+  dw CYLINDERS  ; Starting reduced write current cylinder
   dw 012Ch      ; Starting write precompensation cylinder number
   db 0Bh        ; Maximum ECC burst length
   db 05h        ; Control byte - 00h -> 3ms, 04h -> 200ms, 05h -> 70ms, 06h -> 3ms, 07h -> 3ms

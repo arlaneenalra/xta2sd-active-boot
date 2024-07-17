@@ -22,6 +22,11 @@ typedef struct config_type {
   // Some basic state values
   bool mbr_active; 
   bool tsr_active;
+
+  // CHS specs for the drive
+  bool ch_override;
+  uint16_t cylinders;
+  uint16_t heads;
 } config_t;
 
 /**
@@ -168,6 +173,9 @@ bool is_tsr_patch_active();
 bool is_drive_patched();
 
 void load_tsr(config_t *config, hdd_data_block_t *hdd_data);
+void prepare_hdd_data(config_t *config, mbr_t *sector_buf);
+void print_current_geometry();
+void update_tsr(mbr_t __far *sector_buf);
 
 #define DRIVE_0 0x80
 #define DRIVE_1 0x81
