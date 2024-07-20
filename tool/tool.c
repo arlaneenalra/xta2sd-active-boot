@@ -310,16 +310,16 @@ int main(int argc, char **argv) {
   }
 
   // If we're loading the TSR, this will not return.
-  if (config.load_tsr || config.write) {
-    if (config.tsr_active) {
-      printf("TSR is already loaded, updating to match geometry.\n");
-      update_tsr(&sector_buf);
-    } else {
-      load_tsr(&config, &sector_buf.mbr.hdd_data);
-    }
+  if (config.load_tsr) {
+    load_tsr(&config, &sector_buf.mbr.hdd_data);
   }
 
   if (config.write) {
+    if (config.tsr_active) {
+      printf("TSR is already loaded, updating to match geometry.\n");
+      update_tsr(&sector_buf);
+    } 
+
     return write_mbr(&config, &sector_buf);
   }
 
