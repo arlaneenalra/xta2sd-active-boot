@@ -30,6 +30,31 @@ far_ptr_t predicted;
   return predicted;
 }
 
+/***
+ * Outputs the currently active drive geometry based on int 41h.
+ */
+void print_current_geometry() {
+  hdd_data_block_t __far *active_table =
+    (hdd_data_block_t __far *)hdd_table_ptr->ptr;
+
+  printf("Active hdd table %04X:%04X Geometry: Cylinders=%i Heads=%i\n",
+    hdd_table_ptr->vector.segment,
+    hdd_table_ptr->vector.offset,
+    active_table->cylinders,
+    active_table->heads);
+}
+
+void update_tsr(mbr_t __far *sector_buf) {
+  hdd_data_block_t __far *active_table =
+    (hdd_data_block_t __far *)hdd_table_ptr->ptr;
+
+  // Copy the data from tsr_in to the tsr_data structure.
+  _fmemcpy(
+      active_table,
+      &(sector_buf->mbr.hdd_data),
+      sizeof(hdd_data_block_t));
+}
+
 /**
  * Determine if the boot sector patch is active was used to boot this machine.
  */
@@ -52,11 +77,6 @@ bool is_tsr_patch_active() {
     return false;
   }
 
-  /*printf("TSR Signature is %04X:%04X -> %08lX\n", 
-    hdd_table_ptr->vector.segment,
-    hdd_table_ptr->vector.offset,
-    ((tsr_resident_t __far *)hdd_table_ptr->ptr)->signature); */
-
   return ((tsr_resident_t __far *)hdd_table_ptr->ptr)
      ->signature == TSR_SIGNATURE;
 }
@@ -70,11 +90,6 @@ void load_tsr(config_t *config, hdd_data_block_t *hdd_data) {
 
   env_block.vector.segment = _psp;
   env_block.vector.offset = 0x002C;
-
-  if (config->tsr_active) {
-    printf("TSR is already loaded, nothing to do.\n");
-    return;
-  }    
 
   // Copy the data from tsr_in to the tsr_data structure.
   memcpy(
@@ -90,7 +105,7 @@ void load_tsr(config_t *config, hdd_data_block_t *hdd_data) {
 
   // Clear the MBR patch if it was active
   if (config->mbr_active) {
-    printf("Unloading MBR patch.\n");
+    printf("Replacing MBR patch.\n");
 
     // Give the claimed memory back
     *memory_size += 1;
