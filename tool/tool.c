@@ -63,7 +63,7 @@ int usage() {
   printf("Usage:\n");
   printf("  tool [/f] [/d #] [/r]\n");
   printf("\n");
-  printf("  /d # Drive to operate on.\n");
+  printf("  /d # Drive to operate on. This is the fixed disk number rather.\n");
   printf("  /r   Dump the loaded boot sector as hex.\n");
   printf("  /p   Output current partition table.\n");
   printf("  /w   Overwrite the boot sector with our active version.\n");
@@ -73,6 +73,10 @@ int usage() {
   printf("       one. Only makes sense with /w.\n");
   printf("  /t   Load the TSR version of the bios patch and replace the\n");
   printf("       memory inefficient boot sector patch if it's loaded.\n");
+  printf("  /c # Set the number of cylinders the drive has. Defaults to\n");
+  printf("       900 (0x384)\n"); 
+  printf("  /h # Set the number of heads the drive has. Defaults to\n");
+  printf("       15 (0x0E)\n");
   printf("\n");
 
   return 1;
@@ -83,12 +87,35 @@ int parse_arguments(int argc, char **argv, config_t *config) {
   int c;
 
   // See: https://open-watcom.github.io/open-watcom-v2-wikidocs/clib.html#getopt
-  while((c = getopt(argc, argv, "d:rpwnt")) != -1) {
-    parsed++;
+  while((c = getopt(argc, argv, "d:rpwntc:h:")) != -1) {
     switch(c) {
       case 'd':
         // Drive can only be a byte value.
         config->drive = atoi(optarg) & 0xFF;
+        break;
+
+      case 'c':
+        parsed = atoi(optarg);
+
+        if (parsed > 1023 || parsed <= 0) {
+          printf("Cylinders must be between 1 and 1023.\n");
+          exit(1);
+        }
+
+        config->cylinders = (uint16_t)parsed;
+        config->ch_override = true;
+        break;
+
+      case 'h':
+        parsed = atoi(optarg);
+
+        if (parsed > 15 || parsed <= 0) {
+          printf("Heads must be between 1 and 15\n");
+          exit(1);
+        }
+
+        config->heads = (uint16_t)parsed;
+        config->ch_override = true;
         break;
 
       case 'r':
@@ -135,32 +162,41 @@ bool is_drive_patched(mbr_t *sector_buf) {
 }
 
 /**
+ * Handles setting up the patch and mbr data that would be used
+ * by the TSR or written to disk.
+ */
+void prepare_hdd_data(config_t *config, mbr_t *sector_buf) {
+  mbr_t write_buf;
+
+  memcpy(write_buf.buffer, boot_boot_bin, sizeof(mbr_t));
+
+  // Copy the partition table over from the original boot sector.
+  if (!config->ignore_partition_table) {
+    memcpy(
+        write_buf.mbr.partition_table,
+        (sector_buf->mbr.partition_table),
+        sizeof(partition_entry_t) * 4);
+  }
+
+  // Update the data table if we have an override value or are writing
+  // to the disk.
+  if (config->write || config->ch_override) {
+    write_buf.mbr.hdd_data.cylinders = config->cylinders;
+    write_buf.mbr.hdd_data.heads = config->heads;
+    write_buf.mbr.hdd_data.reduced_write_cylinder = config->cylinders;
+  }
+
+
+  // Copy the data back to the sector buffer.
+  memcpy(sector_buf->buffer, write_buf.buffer, sizeof(mbr_t));
+}
+
+/**
  * Updates the on disk MBR with our active one preserving the
  * existing partition table.
  */
-uint8_t write_mbr(config_t *config, mbr_t *original) {
+uint8_t write_mbr(config_t *config, mbr_t *write_buf) {
   uint8_t status;
-  mbr_t write_buf;
-
-  if (sizeof(mbr_t) != boot_boot_bin_len) {
-    printf("FATAL ERROR: MBR structure and Boot Sector are not the same size!!!\n");
-    printf("MBR Struct %u Boot Sector %u\n", sizeof(mbr_t), boot_boot_bin_len);
-  }
-  
-  memcpy(write_buf.buffer, boot_boot_bin, sizeof(mbr_t));
- 
-  // Copy the partition table over from the original boot sector.
-  if (!config->ignore_partition_table) {
-    printf("Found existing partition table, copying.\n");
-    memcpy(
-        write_buf.mbr.partition_table,
-        (original->mbr.partition_table),
-        sizeof(partition_entry_t) * 4);
-
-  }
-
-  printf("Using partition table:\n");
-  print_partition_table(write_buf.mbr.partition_table);
 
   // Give users a chance to back out before nuking their drive. 
   nasty_warning();
@@ -168,15 +204,19 @@ uint8_t write_mbr(config_t *config, mbr_t *original) {
   printf("Writing active boot sector...\n");
 
   // Actually write the boot sector. 
-  status = write_boot_sector(config->drive, &write_buf);
+  status = write_boot_sector(config->drive, write_buf);
 
   if (status) {
     printf("Error writing boot sector %02X -> %s\n", status, translate_error(status));
   }
 
   printf("Done!\n");
-
-  printf("A reboot is necessary for these changes to take effect.\n");
+  
+  printf("Please run FDISK to verify the new drive geometry and update\n");
+  printf("your partition table.\n");
+  printf("\n");
+  printf("If the drive geometry has changed, any existing partitons will be\n");
+  printf("invalid!\n");
 
   return status;
 }
@@ -189,6 +229,7 @@ int main(int argc, char **argv) {
 
   printf("Active Boot Sector Version: %s\n", VERSION);
   printf("Copyright (c) 2024 Chris Salch\n");
+  printf("\n");
   printf("This program comes with ABSOLUTELY NO WARRANTY!\n");
   printf("This is free software, and you are welcome to redistribute it\n");
   printf("under certain conditions.  For details see the accompanying\n");
@@ -199,10 +240,14 @@ int main(int argc, char **argv) {
 
   memset((void *)&config, 0, sizeof(config_t));
 
-  // setup defaults
+  // Setup defaults
+  config.cylinders = 900;
+  config.heads = 15;
+
+  // Check system state. 
   config.mbr_active = is_boot_sector_patch_active();
   config.tsr_active = is_tsr_patch_active(); 
-
+  
   // zero out the sector buffer
   memset(&sector_buf, 0, sizeof(sector_buf));
 
@@ -212,16 +257,21 @@ int main(int argc, char **argv) {
     return usage();  
   }
 
+  // Nothing will work if this is true.
+  if (sizeof(mbr_t) != boot_boot_bin_len) {
+    printf("FATAL ERROR: MBR structure and Boot Sector are not the same size!!!\n");
+    printf("MBR Struct %u Boot Sector %u\n", sizeof(mbr_t), boot_boot_bin_len);
+  }
+
+  print_current_geometry();
+
   printf("Boot sector patch expected at %04X:%04X -> %s\n",
       mbr_expected.vector.segment, mbr_expected.vector.offset,
       config.mbr_active ? "loaded" : "not loaded");
 
-  printf("TSR patch size %0u bytes.\n", tsr_data_paragraphs * 16);
-  printf("TSR patch -> %s\n", config.tsr_active ? "loaded" : "not loaded");
-
-  // Check to see if we can read from sector 0, 0, 0 on the primary
+    // Check to see if we can read from sector 0, 0, 0 on the primary
   // hard drive.
-  printf("Reading boot sector from fixed disk %u -> ", config.drive);
+  printf("Boot sector from fixed disk %u -> ", config.drive);
  
   status = read_boot_sector(config.drive, &sector_buf.buffer);
 
@@ -232,10 +282,14 @@ int main(int argc, char **argv) {
     // If we can't read the disk, there's nothing we can do.
     return 1;
   } else if (is_drive_patched(&sector_buf)) {
-    printf("patched\n");
+    printf("patched Geometry: Cylinders=%i Heads=%i\n",
+        sector_buf.mbr.hdd_data.cylinders,
+        sector_buf.mbr.hdd_data.heads);
   } else {
     printf("not patched\n");  
   }
+
+  printf("TSR patch -> %s\n", config.tsr_active ? "loaded" : "not loaded");
 
   if (config.output_partition_table) {
     print_partition_table(sector_buf.mbr.partition_table);
@@ -245,24 +299,28 @@ int main(int argc, char **argv) {
     dump_sector(&sector_buf.buffer);
   }
 
+  // Prep data for TSR/MDR overwrite.
+  prepare_hdd_data(&config, &sector_buf);
+
+  // The geometry can be different that what was reported above.
+  if (config.load_tsr || config.write) {
+    printf("Using Geometry: Cylinders=%i Heads=%i\n",
+      sector_buf.mbr.hdd_data.cylinders,
+      sector_buf.mbr.hdd_data.heads);
+  }
+
   // If we're loading the TSR, this will not return.
   if (config.load_tsr) {
-    // Copy data from MBR
-    if (config.mbr_active) {
-      printf("Repatching with MBR data.\n");
-      load_tsr(&config, &sector_buf.mbr.hdd_data);
-    } 
-
-    printf("Loading default patch.\n");
-    load_tsr(&config, &(((mbr_t *)boot_boot_bin)->mbr.hdd_data));
-  } 
+    load_tsr(&config, &sector_buf.mbr.hdd_data);
+  }
 
   if (config.write) {
-    status = write_mbr(&config, &sector_buf);
-
-    if (status) {
-      return 1; 
+    if (config.tsr_active) {
+      printf("TSR is already loaded, updating to match geometry.\n");
+      update_tsr(&sector_buf);
     } 
+
+    return write_mbr(&config, &sector_buf);
   }
 
   return 0;
